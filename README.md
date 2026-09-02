@@ -2,6 +2,8 @@
 
 SriPage is a local-first PDF parsing demo. The browser uploads PDFs directly to MinIO, the API records a job in PostgreSQL and queues it in Redis/BullMQ, and a separate worker runs the selected parser.
 
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for the complete developer runbook, API-only workflow, MinIO and Redis inspection commands, database queries, troubleshooting, and parser extension guide.
+
 ## Development
 
 1. Start the dependencies with `docker compose -f docker-compose.dev.yml up -d`.

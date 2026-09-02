@@ -9,5 +9,5 @@ export class CreateJobDto {
   @IsMimeType() mimeType!: string;
   @IsInt() @Min(1) size!: number;
   @IsString() @IsNotEmpty() inputObjectKey!: string;
-  @IsOptional() @IsString() method = 'vlm';
+  @IsOptional() @IsString() method = 'non-vlm';
 }
