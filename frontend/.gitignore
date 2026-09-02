@@ -20,6 +20,9 @@
 # production
 /build
 
+# stitch files
+/stitch/*
+
 # misc
 .DS_Store
 *.pem
