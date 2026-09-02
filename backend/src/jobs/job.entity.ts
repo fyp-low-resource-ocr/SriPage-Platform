@@ -7,7 +7,7 @@ export class Job {
   @Column() mimeType!: string;
   @Column('bigint') size!: number;
   @Column() inputObjectKey!: string;
-  @Column({ nullable: true }) resultObjectKey!: string | null;
+  @Column({ type: 'varchar', nullable: true }) resultObjectKey!: string | null;
   @Column() method!: string;
   @Column({ default: 'cpu' }) runtime!: 'cpu' | 'gpu';
   @Column({ default: 'queued' }) status!: JobStatus;
