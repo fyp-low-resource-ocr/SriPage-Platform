@@ -23,11 +23,31 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const ACCEPT =
   ".pdf,.csv,.xlsx,.json,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json";
 
+const ICON_PATHS: Record<string, string> = {
+  notifications: "M12 22c1.1 0 1.99-.9 1.99-2h-3.98c0 1.1.89 2 1.99 2ZM18 16v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.62 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z",
+  account_circle: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3Zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22Z",
+  cloud_upload: "M19.35 10.04A7.49 7.49 0 0 0 12 4a7.5 7.5 0 0 0-7.35 6.04A5.994 5.994 0 0 0 6 22h13a6 6 0 0 0 .35-11.96ZM13 13v4h-2v-4H8l4-4 4 4h-3Z",
+  insert_drive_file: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6Zm1 7V3.5L18.5 9H15Z",
+  trending_up: "m16 6 2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6Z",
+  timer: "M15 1H9v2h6V1Zm-1 13h-4V8h2v4h2v2Zm4.03-8.03 1.42-1.42a10.04 10.04 0 0 0-1.41-1.18l-1.42 1.42A8.94 8.94 0 0 0 12 3a9 9 0 1 0 9 9c0-2.2-.79-4.21-2.1-5.78l-1.42 1.42A7 7 0 1 1 12 5c1.56 0 3 .51 4.15 1.38l1.88 1.88Z",
+  trending_down: "m16 18 2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6h-6Z",
+  arrow_forward: "m12 4-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8Z",
+  sync: "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8Zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3Z",
+  queue: "M21 16V4c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2Zm-2 0H7V4h12v12ZM3 6H1v14c0 1.1.9 2 2 2h14v-2H3V6Zm4 2h10v2H7V8Zm0 4h10v2H7v-2Zm0-8h10v2H7V4Z",
+  cancel: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59Z",
+  data_object: "M4 4h3v2H6v12h1v2H4V4Zm10 0h6v2h-6V4Zm-4 3h4v2h-4V7Zm0 4h4v2h-4v-2Zm0 4h4v2h-4v-2Zm-6 5h6v2H4v-2Zm10-2h6v2h-6v-2Z",
+  content_copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1Zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2Zm0 16H8V7h11v14Z",
+  download: "M5 20h14v-2H5v2ZM19 9h-4V3H9v6H5l7 7 7-7Z",
+  description: "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6Zm1 7V3.5L18.5 9H15ZM8 13h8v2H8v-2Zm0 4h8v2H8v-2Zm0-8h3v2H8V9Z",
+  zoom_in: "M9 11h2v2h2v-2h2V9h-2V7h-2v2H9v2Zm3-9C6.48 2 2 6.48 2 12s4.48 10 10 10c1.98 0 3.82-.57 5.38-1.55L21.49 25.56 22.9 24.15l-4.11-4.11A9.96 9.96 0 0 0 22 12c0-5.52-4.48-10-10-10Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
+  zoom_out: "M9 11h6V9H9v2Zm3-9C6.48 2 2 6.48 2 12s4.48 10 10 10c1.98 0 3.82-.57 5.38-1.55L21.49 25.56 22.9 24.15l-4.11-4.11A9.96 9.96 0 0 0 22 12c0-5.52-4.48-10-10-10Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
+};
+
 function Icon({ children }: { children: string }) {
   return (
-    <span className="material-symbols-outlined" aria-hidden="true">
-      {children}
-    </span>
+    <svg className="material-symbols-outlined" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" focusable="false">
+      <path d={ICON_PATHS[children] ?? ICON_PATHS.description} />
+    </svg>
   );
 }
 function Header() {
@@ -262,7 +282,7 @@ function ResultScreen({ job }: { job: Job }) {
   };
   return (
     <main className="result-screen">
-      <section className="result-card">
+      <section className="result-card mt-24">
         <div className="card-heading">
           <div>
             <Icon>data_object</Icon>
@@ -279,7 +299,7 @@ function ResultScreen({ job }: { job: Job }) {
         </div>
         <pre>{pretty}</pre>
       </section>
-      <section className="result-card source-card">
+      <section className="result-card source-card mt-24">
         <div className="card-heading">
           <div>
             <Icon>description</Icon>
