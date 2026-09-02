@@ -1,69 +1,14 @@
-import Image from "next/image";
-
+"use client";
+import { ChangeEvent, DragEvent, useCallback, useEffect, useState } from "react";
+type Job = { id:string; filename:string; method:string; status:string; queuePosition:number|null; result:unknown; error:string|null; createdAt:string };
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  const [jobs,setJobs]=useState<Job[]>([]),[method,setMethod]=useState("vlm"),[file,setFile]=useState<File|null>(null),[selected,setSelected]=useState<Job|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+  const loadJobs=useCallback(async()=>{const r=await fetch(`${API}/jobs`,{cache:"no-store"});if(r.ok)setJobs(await r.json())},[]);
+  useEffect(()=>{void loadJobs()},[loadJobs]);
+  useEffect(()=>{if(!jobs.some(j=>j.status==="queued"||j.status==="processing"))return;const t=setInterval(()=>void loadJobs(),2000);return()=>clearInterval(t)},[jobs,loadJobs]);
+  async function upload(){if(!file||file.type!=="application/pdf"){setMessage("Please choose a PDF file.");return}setBusy(true);setMessage("Preparing secure upload…");try{const p=await fetch(`${API}/uploads/presign`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename:file.name,mimeType:file.type,size:file.size})}).then(r=>r.json());const put=await fetch(p.uploadUrl,{method:"PUT",headers:{"Content-Type":file.type},body:file});if(!put.ok)throw Error("MinIO upload failed");const job=await fetch(`${API}/jobs`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename:file.name,mimeType:file.type,size:file.size,inputObjectKey:p.objectKey,method})}).then(r=>r.json());setJobs(c=>[job,...c]);setSelected(job);setFile(null);setMessage("Added to the parsing queue.")}catch(e){setMessage(e instanceof Error?e.message:"Upload failed")}finally{setBusy(false)}}
+  function choose(e:ChangeEvent<HTMLInputElement>){setFile(e.target.files?.[0]??null)} function drop(e:DragEvent<HTMLDivElement>){e.preventDefault();setFile(e.dataTransfer.files?.[0]??null)}
+  const active=selected?jobs.find(j=>j.id===selected.id)??selected:null;
+  return <main className="shell"><header><div><h1>SriPage</h1><span>v1.0.0-beta</span></div><div className="icons">◌　◎</div></header><section className="intro"><p>Upload documents to begin parsing.</p></section><div className="workspace"><div className="panel upload-panel"><div className="dropzone" onDragOver={e=>e.preventDefault()} onDrop={drop} onClick={()=>document.getElementById("file")?.click()}><input id="file" type="file" accept="application/pdf,.pdf" hidden onChange={choose}/><div className="upload-icon">↑</div><h2>{file?file.name:"Drop your PDF here"}</h2><p>{file?`${(file.size/1024/1024).toFixed(2)} MB ready`:"or click to browse from your device"}</p></div><div className="controls"><label>Parsing method<select value={method} onChange={e=>setMethod(e.target.value)}><option value="vlm">VLM · Vision Language Model</option></select></label><button disabled={!file||busy} onClick={upload}>{busy?"Uploading…":"Start parsing →"}</button></div>{message&&<p className="message">{message}</p>}</div><div className="panel jobs-panel"><div className="panel-title"><span>Recent documents</span><small>{jobs.length} total</small></div>{jobs.length===0?<div className="empty">Your parsed documents will appear here.</div>:<div className="job-list">{jobs.map(j=><button className={`job ${active?.id===j.id?"selected":""}`} key={j.id} onClick={()=>setSelected(j)}><div><strong>{j.filename}</strong><small>{j.method.toUpperCase()} · {new Date(j.createdAt).toLocaleString()}</small></div><div className={`status ${j.status}`}>{j.status==="queued"&&j.queuePosition?`#${j.queuePosition} in queue`:j.status}</div></button>)}</div>}</div></div>{active&&<section className="panel detail"><div className="panel-title"><span>{active.filename}</span><small>{active.status.toUpperCase()}</small></div>{active.status==="queued"&&<div className="progress"><div className="ring">{active.queuePosition??"—"}</div><h2>Waiting in queue</h2><p>Position {active.queuePosition??"updating"}. This page refreshes automatically.</p></div>}{active.status==="processing"&&<div className="progress"><div className="spinner"/><h2>Parsing in progress</h2><p>The document is being analyzed by the {active.method.toUpperCase()} method.</p></div>}{active.status==="failed"&&<div className="error">{active.error??"Parsing failed."}</div>}{active.status==="completed"&&<div className="result"><div><span>Extracted payload</span><button onClick={()=>navigator.clipboard.writeText(JSON.stringify(active.result,null,2))}>Copy JSON</button></div><pre>{JSON.stringify(active.result,null,2)}</pre></div>}</section>}</main>;
 }

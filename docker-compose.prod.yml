@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-sripage}"
+      POSTGRES_USER: "${POSTGRES_USER:-sripage}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}"
+    volumes: ["pg_prod:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"], interval: 5s, timeout: 5s, retries: 10 }
+  redis:
+    image: redis:7-alpine
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, timeout: 5s, retries: 10 }
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY}"
+    volumes: ["minio_prod:/data"]
+    healthcheck: { test: ["CMD", "mc", "ready", "local"], interval: 5s, timeout: 5s, retries: 10 }
+  backend:
+    build: ./backend
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER:-sripage}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sripage}"
+      REDIS_URL: "redis://redis:6379"
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-localhost}"
+      MINIO_PUBLIC_PORT: "${MINIO_PUBLIC_PORT:-9000}"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY}"
+      CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:3001}"
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy }, minio: { condition: service_healthy } }
+  worker:
+    build: ./backend
+    command: node dist/worker-main
+    environment:
+      WORKER_ENABLED: "true"
+      DATABASE_URL: "postgres://${POSTGRES_USER:-sripage}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sripage}"
+      REDIS_URL: "redis://redis:6379"
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-localhost}"
+      MINIO_PUBLIC_PORT: "${MINIO_PUBLIC_PORT:-9000}"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:?set MINIO_ACCESS_KEY}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY}"
+    depends_on: { backend: { condition: service_started } }
+  frontend:
+    build: ./frontend
+    ports: ["3001:3000"]
+    environment:
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3000}"
+    depends_on: [backend]
+volumes: { pg_prod: {}, minio_prod: {} }
