@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useSyncExternalStore,
   useState,
 } from "react";
 
@@ -22,6 +23,22 @@ type Job = {
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const ACCEPT =
   ".pdf,.csv,.xlsx,.json,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json";
+const THEME_EVENT = "sripage-theme-change";
+const themeStore = {
+  subscribe: (onChange: () => void) => {
+    window.addEventListener(THEME_EVENT, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(THEME_EVENT, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  },
+  getSnapshot: (): "dark" | "light" => {
+    const stored = window.localStorage.getItem("sripage-theme");
+    return stored === "light" ? "light" : "dark";
+  },
+  getServerSnapshot: () => "dark" as const,
+};
 
 const ICON_PATHS: Record<string, string> = {
   notifications: "M12 22c1.1 0 1.99-.9 1.99-2h-3.98c0 1.1.89 2 1.99 2ZM18 16v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.62 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z",
@@ -41,6 +58,8 @@ const ICON_PATHS: Record<string, string> = {
   description: "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6Zm1 7V3.5L18.5 9H15ZM8 13h8v2H8v-2Zm0 4h8v2H8v-2Zm0-8h3v2H8V9Z",
   zoom_in: "M9 11h2v2h2v-2h2V9h-2V7h-2v2H9v2Zm3-9C6.48 2 2 6.48 2 12s4.48 10 10 10c1.98 0 3.82-.57 5.38-1.55L21.49 25.56 22.9 24.15l-4.11-4.11A9.96 9.96 0 0 0 22 12c0-5.52-4.48-10-10-10Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
   zoom_out: "M9 11h6V9H9v2Zm3-9C6.48 2 2 6.48 2 12s4.48 10 10 10c1.98 0 3.82-.57 5.38-1.55L21.49 25.56 22.9 24.15l-4.11-4.11A9.96 9.96 0 0 0 22 12c0-5.52-4.48-10-10-10Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
+  light_mode: "M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM12 2V1m0 22v-1m10-10h1M1 12h1m17.07-7.07.71-.71M4.22 19.78l.71-.71m0-14.14-.71-.71m15.56 15.56-.71-.71",
+  dark_mode: "M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36A7.97 7.97 0 0 1 12 19a7 7 0 0 1 0-14c.47 0 .93.04 1.36.1A9.1 9.1 0 0 0 12 3Z",
 };
 
 function Icon({ children }: { children: string }) {
@@ -50,7 +69,7 @@ function Icon({ children }: { children: string }) {
     </svg>
   );
 }
-function Header() {
+function Header({ theme, onToggleTheme }: { theme: "dark" | "light"; onToggleTheme: () => void }) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -59,6 +78,17 @@ function Header() {
           <p>v1.0.0-beta</p>
         </div>
         <div className="top-actions">
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            aria-pressed={theme === "light"}
+            onClick={onToggleTheme}
+          >
+            <span className="theme-toggle-track">
+              <span className="theme-toggle-thumb"><Icon>{theme === "dark" ? "dark_mode" : "light_mode"}</Icon></span>
+            </span>
+          </button>
           <button aria-label="Notifications">
             <Icon>notifications</Icon>
           </button>
@@ -121,7 +151,7 @@ function UploadScreen({
         >
           <input type="file" accept={ACCEPT} onChange={choose} />
           <div className="upload-circle">
-            <Icon>cloud_upload</Icon>
+            <Icon>file_upload</Icon>
           </div>
           <h2>{file ? file.name : "Drop documents here to parse"}</h2>
           <p>
@@ -180,7 +210,7 @@ function UploadScreen({
               id="parsing-method"
               style={{
                 padding: "6px 26px 6px 8px",
-                border: "1px solid #ffffff1a",
+                border: "1px solid var(--soft-line)",
                 borderRadius: 4,
                 background: "var(--container)",
                 color: "var(--text)",
@@ -359,6 +389,19 @@ export default function Home() {
     [selected, setSelected] = useState<Job | null>(null),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
+  const theme = useSyncExternalStore(
+    themeStore.subscribe,
+    themeStore.getSnapshot,
+    themeStore.getServerSnapshot,
+  );
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    window.localStorage.setItem("sripage-theme", nextTheme);
+    window.dispatchEvent(new Event(THEME_EVENT));
+  };
   const loadJobs = useCallback(async () => {
     try {
       const r = await fetch(`${API}/jobs`, { cache: "no-store" });
@@ -441,7 +484,10 @@ export default function Home() {
     );
   return (
     <>
-      <Header />
+      <Header
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
       {screen}
     </>
   );
