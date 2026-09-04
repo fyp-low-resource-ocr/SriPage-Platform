@@ -28,6 +28,8 @@
 
   --toggle-track: #3a3028;
   --toggle-icon: #ffb86b;
+  --glow-one: #e8892f1c;
+  --glow-two: #7c3aed12;
 }
 
 [data-theme="light"] {
@@ -58,6 +60,8 @@
 
   --toggle-track: #f3d5b8;
   --toggle-icon: #a84f00;
+  --glow-one: #f59e0b24;
+  --glow-two: #fb923c1c;
 }
 * {
   box-sizing: border-box;
@@ -70,8 +74,24 @@ body {
   color: var(--text);
 }
 body {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
   font-family: "Hanken Grotesk", sans-serif;
   font-size: 14px;
+}
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: -25%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 24%, var(--glow-one), transparent 28%),
+    radial-gradient(circle at 82% 72%, var(--glow-two), transparent 30%);
+  filter: blur(24px);
+  /* animation: gradient-drift 22s ease-in-out infinite alternate; */
+  will-change: transform;
 }
 .material-symbols-outlined {
   font-family: "Material Symbols Outlined";
@@ -674,6 +694,22 @@ footer a {
 @keyframes pulse {
   50% {
     opacity: 0.45;
+  }
+}
+@keyframes gradient-drift {
+  0% {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, 3%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(4%, -2%, 0) scale(1.01);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
   }
 }
 @media (max-width: 760px) {
