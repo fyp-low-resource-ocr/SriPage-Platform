@@ -28,20 +28,27 @@
 
   --toggle-track: #3a3028;
   --toggle-icon: #ffb86b;
-  --glow-one: #e8892f1c;
-  --glow-two: #fb718512;
   --toggle-thumb: #131313;
+
+  --glow-one: #e8892f1c;
+  --glow-two: #ffb86b12;
+
   --hover-fill: #e8892f0d;
-  --action-text: #381385;
+  --action-text: #8a4815;
   --ring-glow: #e8892f66;
-  --outline: #948e9d;
+
+  --outline: #948e89;
+
+  /* Document */
   --doc-paper: #f8f8f6;
   --doc-text: #252525;
   --doc-shadow: #0008;
-  --doc-brand: #28204b;
+
+  --doc-brand: #6b3a16;
   --doc-line: #d4d4d0;
-  --doc-rule: #28204b;
+  --doc-rule: #6b3a16;
   --doc-table-rule: #deded9;
+
   --bounding-fill: #e8892f1a;
 }
 
