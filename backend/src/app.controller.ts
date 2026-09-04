@@ -9,7 +9,10 @@ export class AppController {
 
   @Get()
   @ApiOperation({ summary: 'Check that the API is running' })
-  @ApiResponse({ status: 200, schema: { type: 'string', example: 'Hello World!' } })
+  @ApiResponse({
+    status: 200,
+    schema: { type: 'string', example: 'Hello World!' },
+  })
   getHello(): string {
     return this.appService.getHello();
   }

@@ -15,7 +15,9 @@ async function bootstrap() {
   const swaggerPath = process.env.SWAGGER_PATH ?? '/docs';
   const swaggerConfig = new DocumentBuilder()
     .setTitle('SriPage API')
-    .setDescription('API for uploading PDFs, creating parsing jobs, and retrieving results.')
+    .setDescription(
+      'API for uploading PDFs, creating parsing jobs, and retrieving results.',
+    )
     .setVersion('1.0')
     .addServer('/')
     .build();

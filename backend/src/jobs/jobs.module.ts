@@ -6,5 +6,15 @@ import { StorageModule } from '../storage/storage.module';
 import { Job } from './job.entity';
 import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
-@Module({ imports: [TypeOrmModule.forFeature([Job]), QueueModule, StorageModule, ParserModule], controllers: [JobsController], providers: [JobsService], exports: [JobsService] })
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([Job]),
+    QueueModule,
+    StorageModule,
+    ParserModule,
+  ],
+  controllers: [JobsController],
+  providers: [JobsService],
+  exports: [JobsService],
+})
 export class JobsModule {}
