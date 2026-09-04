@@ -20,4 +20,4 @@ Copy the root `.env.example` to `.env`, set the secrets and public MinIO endpoin
 docker compose --env-file .env -f docker-compose.prod.yml up --build
 ```
 
-The dashboard is available on port 3001 and the API on port 3000. Add a parser by implementing `PdfParser` in `backend/src/parsers` and registering it in `ParserService`.
+The frontend dashboard is available on port 3001, the API on port 3000, and the BullMQ queue dashboard is available at http://localhost:3000/admin/queues. Add a parser by implementing `PdfParser` in `backend/src/parsers` and registering it in `ParserService`.
