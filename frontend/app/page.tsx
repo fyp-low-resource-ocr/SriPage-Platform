@@ -103,7 +103,7 @@ function Header({ theme, onToggleTheme }: { theme: "dark" | "light"; onToggleThe
 function Footer() {
   return (
     <footer>
-      <span>© 2024 SriPage. All rights reserved.</span>
+      <span>© 2026 SriPage. All rights reserved.</span>
       <div>
         <a href="#">Privacy Policy</a>
         <a href="#">Terms of Service</a>
