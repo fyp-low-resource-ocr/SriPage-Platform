@@ -27,6 +27,7 @@
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.6",
     "@nestjs/typeorm": "^12.0.1",
     "bullmq": "^6.3.4",
     "class-transformer": "^0.5.1",

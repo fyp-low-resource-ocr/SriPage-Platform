@@ -44,6 +44,8 @@ $ pnpm run start:dev
 $ pnpm run start:prod
 ```
 
+Swagger UI is available at `http://localhost:3000/docs` while the API is running. The raw OpenAPI JSON is available at `http://localhost:3000/docs-json`. Set `SWAGGER_PATH` to change the UI path.
+
 ## Run tests
 
 ```bash
