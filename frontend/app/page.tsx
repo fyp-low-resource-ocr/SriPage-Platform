@@ -255,7 +255,15 @@ function UploadScreen({
   );
 }
 
-function LoadingScreen({ job, onCancel }: { job: Job; onCancel: () => void }) {
+function LoadingScreen({
+  job,
+  onCancel,
+  cancelling,
+}: {
+  job: Job;
+  onCancel: () => void;
+  cancelling: boolean;
+}) {
   return (
     <main className="loading-screen">
       <div className="progress-block">
@@ -280,9 +288,16 @@ function LoadingScreen({ job, onCancel }: { job: Job; onCancel: () => void }) {
           </span>
         </div>
       </div>
-      <button className="cancel-button" onClick={onCancel}>
-        <Icon>cancel</Icon> Cancel Parsing
-      </button>
+      {job.status === "queued" && (
+        <button
+          className="cancel-button"
+          type="button"
+          disabled={cancelling}
+          onClick={onCancel}
+        >
+          <Icon>cancel</Icon> Cancel Parsing
+        </button>
+      )}
     </main>
   );
 }
@@ -411,7 +426,8 @@ export default function Home() {
     [method, setMethod] = useState("non-vlm"),
     [selected, setSelected] = useState<Job | null>(null),
     [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [cancelling, setCancelling] = useState(false);
   const theme = useSyncExternalStore(
     themeStore.subscribe,
     themeStore.getSnapshot,
@@ -490,11 +506,40 @@ export default function Home() {
       setBusy(false);
     }
   }
+  async function cancelJob() {
+    if (!active || active.status !== "queued" || cancelling) return;
+    setCancelling(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${API}/jobs/${active.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.message ?? "Unable to cancel parsing");
+      }
+      const cancelled = await response.json();
+      setJobs((current) =>
+        current.map((job) => (job.id === cancelled.id ? cancelled : job)),
+      );
+      setSelected(null);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Unable to cancel parsing");
+      await loadJobs();
+    } finally {
+      setCancelling(false);
+    }
+  }
   const screen =
     active?.status === "completed" ? (
       <ResultScreen job={active} />
     ) : active ? (
-      <LoadingScreen job={active} onCancel={() => setSelected(null)} />
+      <LoadingScreen
+        job={active}
+        cancelling={cancelling}
+        onCancel={() => void cancelJob()}
+      />
     ) : (
       <UploadScreen
         jobs={jobs}

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -76,6 +77,39 @@ export class JobsService {
     if (!job.resultObjectKey)
       throw new NotFoundException('Result is not ready');
     return { url: await this.storage.presignDownload(job.resultObjectKey) };
+  }
+  async cancel(id: string, ownerHash: string) {
+    const job = await this.get(id, ownerHash);
+    if (job.status !== 'queued') {
+      throw new ConflictException(
+        job.status === 'processing'
+          ? 'A job cannot be cancelled while it is processing'
+          : 'Only queued jobs can be cancelled',
+      );
+    }
+
+    // The conditional update makes cancellation and worker pickup mutually
+    // exclusive when both happen at nearly the same time.
+    const result = await this.repo.update(
+      { id, ownerTokenHash: ownerHash, status: 'queued' },
+      { status: 'cancelled', queuePosition: null },
+    );
+    if (!result.affected) {
+      throw new ConflictException('The job is no longer queued');
+    }
+
+    const queueJob = await this.queue.getJob(id);
+    if (queueJob) {
+      try {
+        await queueJob.remove();
+      } catch {
+        // A worker may have claimed the Redis job in the small window after
+        // the database transition. The worker's guarded claim below will
+        // observe `cancelled` and exit without parsing it.
+      }
+    }
+    await this.refreshPositions();
+    return this.get(id, ownerHash);
   }
   async update(id: string, values: Partial<Job>) {
     await this.repo.update(id, values as QueryDeepPartialEntity<Job>);

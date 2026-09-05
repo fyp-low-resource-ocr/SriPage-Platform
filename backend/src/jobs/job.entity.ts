@@ -6,7 +6,12 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed';
+export type JobStatus =
+  | 'queued'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
 @Entity('jobs')
 export class Job {
   @ApiProperty({ format: 'uuid' })
@@ -37,7 +42,7 @@ export class Job {
   @Column({ default: 'cpu' })
   runtime!: 'cpu' | 'gpu';
   @ApiProperty({
-    enum: ['queued', 'processing', 'completed', 'failed'],
+    enum: ['queued', 'processing', 'completed', 'failed', 'cancelled'],
     example: 'queued',
   })
   @Column({ default: 'queued' })

@@ -32,10 +32,14 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
   }
   private async process(queueJob: QueueJob<{ jobId: string }>) {
     const job = await this.jobs.get(queueJob.data.jobId);
-    await this.jobs.update(job.id, {
-      status: 'processing',
-      queuePosition: null,
-    });
+    const claimed = await this.repo.update(
+      { id: job.id, status: 'queued' },
+      {
+        status: 'processing',
+        queuePosition: null,
+      },
+    );
+    if (!claimed.affected) return;
     await this.jobs.refreshPositions();
     try {
       const output = await this.parsers.parse(job.method, job.runtime, {

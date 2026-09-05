@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ParserService } from '../parsers/parser.service';
@@ -68,6 +77,22 @@ export class JobsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.jobs.get(id, this.sessions.getOwnerHash(req, res));
+  }
+
+  @Delete('jobs/:id')
+  @ApiOperation({ summary: 'Cancel a queued parsing job' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: Job })
+  @ApiResponse({
+    status: 409,
+    description: 'Job is already processing or finished.',
+  })
+  cancel(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.jobs.cancel(id, this.sessions.getOwnerHash(req, res));
   }
 
   @Get('jobs/:id/result')
