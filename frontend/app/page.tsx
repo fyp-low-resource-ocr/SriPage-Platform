@@ -279,7 +279,9 @@ function LoadingScreen({
             <Icon>queue</Icon> Queue:{" "}
             <b>
               {job.status === "queued"
-                ? `${job.queuePosition ?? 2} of 5`
+                ? job.queuePosition === null
+                  ? "waiting"
+                  : job.queuePosition
                 : "processing"}
             </b>
           </span>
