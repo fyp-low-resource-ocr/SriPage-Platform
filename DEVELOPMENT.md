@@ -204,7 +204,7 @@ Useful keys:
 | `bull:pdf-parsing:failed` | Failed BullMQ jobs |
 | `bull:pdf-parsing:<id>` | A BullMQ job payload and metadata |
 
-There is currently no Bull Board web dashboard installed. Redis CLI is the queue inspection tool for this version. PostgreSQL and the HTTP API remain the source of truth for user-visible job state.
+The Bull Board web dashboard is available at `http://localhost:3000/admin/queues` while the API is running. It displays the `pdf-parsing` queue and allows queue inspection and management. Set `BULL_BOARD_ENABLED=false` to disable it, or change its path with `BULL_BOARD_PATH`. Redis CLI remains available for low-level inspection, while PostgreSQL and the HTTP API remain the source of truth for user-visible job state.
 
 ## 7. Inspect PostgreSQL
 
@@ -517,4 +517,3 @@ cd ..
 docker compose --env-file .env.example -f docker-compose.dev.yml config -q
 docker compose --env-file .env.example -f docker-compose.prod.yml config -q
 ```
-

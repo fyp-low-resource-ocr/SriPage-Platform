@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useSyncExternalStore,
   useState,
 } from "react";
 
@@ -22,17 +23,33 @@ type Job = {
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 const ACCEPT =
   ".pdf,.csv,.xlsx,.json,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json";
+const THEME_EVENT = "sripage-theme-change";
+const themeStore = {
+  subscribe: (onChange: () => void) => {
+    window.addEventListener(THEME_EVENT, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(THEME_EVENT, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  },
+  getSnapshot: (): "dark" | "light" => {
+    const stored = window.localStorage.getItem("sripage-theme");
+    return stored === "light" ? "light" : "dark";
+  },
+  getServerSnapshot: () => "dark" as const,
+};
 
 const ICON_PATHS: Record<string, string> = {
   notifications: "M12 22c1.1 0 1.99-.9 1.99-2h-3.98c0 1.1.89 2 1.99 2ZM18 16v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.62 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z",
   account_circle: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3Zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22Z",
-  cloud_upload: "M19.35 10.04A7.49 7.49 0 0 0 12 4a7.5 7.5 0 0 0-7.35 6.04A5.994 5.994 0 0 0 6 22h13a6 6 0 0 0 .35-11.96ZM13 13v4h-2v-4H8l4-4 4 4h-3Z",
+  cloud_upload: "M17.88 10.432A5.992 5.992 0 0 0 12 5.6a6 6 0 0 0-5.88 4.832A4.795 4.795 0 0 0 7.2 20h10.4a4.8 4.8 0 0 0 .28-9.568ZM12.8 12.8V16h-1.6v-3.2H8.8l3.2-3.2 3.2 3.2h-2.4Z",
   insert_drive_file: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6Zm1 7V3.5L18.5 9H15Z",
   trending_up: "m16 6 2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6Z",
   timer: "M15 1H9v2h6V1Zm-1 13h-4V8h2v4h2v2Zm4.03-8.03 1.42-1.42a10.04 10.04 0 0 0-1.41-1.18l-1.42 1.42A8.94 8.94 0 0 0 12 3a9 9 0 1 0 9 9c0-2.2-.79-4.21-2.1-5.78l-1.42 1.42A7 7 0 1 1 12 5c1.56 0 3 .51 4.15 1.38l1.88 1.88Z",
   trending_down: "m16 18 2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6h-6Z",
   arrow_forward: "m12 4-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8Z",
-  sync: "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8Zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3Z",
+  sync: "M12 10.4V9.8l-.8.8.8.8v-.6c.662 0 1.2.538 1.2 1.2 0 .202-.05.394-.14.56l.292.292A1.586 1.586 0 0 0 13.6 12c0-.884-.716-1.6-1.6-1.6Zm0 2.8c-.662 0-1.2-.538-1.2-1.2 0-.202.05-.394.14-.56l-.292-.292A1.586 1.586 0 0 0 10.4 12c0 .884.716 1.6 1.6 1.6v.6l.8-.8-.8-.8v.6Z",
   queue: "M21 16V4c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2Zm-2 0H7V4h12v12ZM3 6H1v14c0 1.1.9 2 2 2h14v-2H3V6Zm4 2h10v2H7V8Zm0 4h10v2H7v-2Zm0-8h10v2H7V4Z",
   cancel: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59Z",
   data_object: "M4 4h3v2H6v12h1v2H4V4Zm10 0h6v2h-6V4Zm-4 3h4v2h-4V7Zm0 4h4v2h-4v-2Zm0 4h4v2h-4v-2Zm-6 5h6v2H4v-2Zm10-2h6v2h-6v-2Z",
@@ -41,6 +58,8 @@ const ICON_PATHS: Record<string, string> = {
   description: "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6Zm1 7V3.5L18.5 9H15ZM8 13h8v2H8v-2Zm0 4h8v2H8v-2Zm0-8h3v2H8V9Z",
   zoom_in: "M9 11h2v2h2v-2h2V9h-2V7h-2v2H9v2Zm3-9C6.48 2 2 6.48 2 12s4.48 10 10 10c1.98 0 3.82-.57 5.38-1.55L21.49 25.56 22.9 24.15l-4.11-4.11A9.96 9.96 0 0 0 22 12c0-5.52-4.48-10-10-10Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
   zoom_out: "M9 11h6V9H9v2Zm3-9C6.48 2 2 6.48 2 12s4.48 10 10 10c1.98 0 3.82-.57 5.38-1.55L21.49 25.56 22.9 24.15l-4.11-4.11A9.96 9.96 0 0 0 22 12c0-5.52-4.48-10-10-10Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z",
+  light_mode: "M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM12 2V1m0 22v-1m10-10h1M1 12h1m17.07-7.07.71-.71M4.22 19.78l.71-.71m0-14.14-.71-.71m15.56 15.56-.71-.71",
+  dark_mode: "M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36A7.97 7.97 0 0 1 12 19a7 7 0 0 1 0-14c.47 0 .93.04 1.36.1A9.1 9.1 0 0 0 12 3Z",
 };
 
 function Icon({ children }: { children: string }) {
@@ -50,7 +69,7 @@ function Icon({ children }: { children: string }) {
     </svg>
   );
 }
-function Header() {
+function Header({ theme, onToggleTheme }: { theme: "dark" | "light"; onToggleTheme: () => void }) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -59,6 +78,17 @@ function Header() {
           <p>v1.0.0-beta</p>
         </div>
         <div className="top-actions">
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            aria-pressed={theme === "light"}
+            onClick={onToggleTheme}
+          >
+            <span className="theme-toggle-track">
+              <span className="theme-toggle-thumb"><Icon>{theme === "dark" ? "dark_mode" : "light_mode"}</Icon></span>
+            </span>
+          </button>
           <button aria-label="Notifications">
             <Icon>notifications</Icon>
           </button>
@@ -73,7 +103,7 @@ function Header() {
 function Footer() {
   return (
     <footer>
-      <span>© 2024 SriPage. All rights reserved.</span>
+      <span>© 2026 SriPage. All rights reserved.</span>
       <div>
         <a href="#">Privacy Policy</a>
         <a href="#">Terms of Service</a>
@@ -90,6 +120,7 @@ function UploadScreen({
   method,
   setMethod,
   onUpload,
+  onSelect,
   busy,
   message,
 }: {
@@ -101,6 +132,7 @@ function UploadScreen({
   onUpload: () => void;
   busy: boolean;
   message: string;
+  onSelect: (job: Job) => void;
 }) {
   const choose = (e: ChangeEvent<HTMLInputElement>) =>
     setFile(e.target.files?.[0] ?? null);
@@ -180,7 +212,7 @@ function UploadScreen({
               id="parsing-method"
               style={{
                 padding: "6px 26px 6px 8px",
-                border: "1px solid #ffffff1a",
+                border: "1px solid var(--soft-line)",
                 borderRadius: 4,
                 background: "var(--container)",
                 color: "var(--text)",
@@ -196,13 +228,42 @@ function UploadScreen({
           </div>
         </details>
         {message && <p className="notice">{message}</p>}
+        <section className="history-card" aria-labelledby="history-heading">
+          <div className="history-heading">
+            <div>
+              <h2 id="history-heading">Recent files</h2>
+              <p>This browser&apos;s history</p>
+            </div>
+            <Icon>queue</Icon>
+          </div>
+          {jobs.length === 0 ? (
+            <p className="history-empty">Your parsed files will appear here.</p>
+          ) : (
+            <div className="history-list">
+              {jobs.slice(0, 5).map((job) => (
+                <button className="history-item" key={job.id} onClick={() => onSelect(job)}>
+                  <span><Icon>description</Icon><span>{job.filename}</span></span>
+                  <small>{job.status}</small>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
       <Footer />
     </>
   );
 }
 
-function LoadingScreen({ job, onCancel }: { job: Job; onCancel: () => void }) {
+function LoadingScreen({
+  job,
+  onCancel,
+  cancelling,
+}: {
+  job: Job;
+  onCancel: () => void;
+  cancelling: boolean;
+}) {
   return (
     <main className="loading-screen">
       <div className="progress-block">
@@ -218,7 +279,9 @@ function LoadingScreen({ job, onCancel }: { job: Job; onCancel: () => void }) {
             <Icon>queue</Icon> Queue:{" "}
             <b>
               {job.status === "queued"
-                ? `${job.queuePosition ?? 2} of 5`
+                ? job.queuePosition === null
+                  ? "waiting"
+                  : job.queuePosition
                 : "processing"}
             </b>
           </span>
@@ -227,8 +290,32 @@ function LoadingScreen({ job, onCancel }: { job: Job; onCancel: () => void }) {
           </span>
         </div>
       </div>
-      <button className="cancel-button" onClick={onCancel}>
-        <Icon>cancel</Icon> Cancel Parsing
+      {job.status === "queued" && (
+        <button
+          className="cancel-button"
+          type="button"
+          disabled={cancelling}
+          onClick={onCancel}
+        >
+          <Icon>cancel</Icon> Cancel Parsing
+        </button>
+      )}
+    </main>
+  );
+}
+
+function CancelledScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <main className="loading-screen cancelled-screen">
+      <div className="cancelled-state">
+        <div className="cancelled-icon">
+          <Icon>cancel</Icon>
+        </div>
+        <h2>Parsing cancelled</h2>
+        <p>This queued task was cancelled before processing started.</p>
+      </div>
+      <button className="cancel-button" type="button" onClick={onBack}>
+        Back to files
       </button>
     </main>
   );
@@ -358,10 +445,24 @@ export default function Home() {
     [method, setMethod] = useState("non-vlm"),
     [selected, setSelected] = useState<Job | null>(null),
     [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [cancelling, setCancelling] = useState(false);
+  const theme = useSyncExternalStore(
+    themeStore.subscribe,
+    themeStore.getSnapshot,
+    themeStore.getServerSnapshot,
+  );
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    window.localStorage.setItem("sripage-theme", nextTheme);
+    window.dispatchEvent(new Event(THEME_EVENT));
+  };
   const loadJobs = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/jobs`, { cache: "no-store" });
+      const r = await fetch(`${API}/jobs`, { cache: "no-store", credentials: "include" });
       if (r.ok) setJobs(await r.json());
     } catch {
       /* API can be offline while UI is previewed. */
@@ -390,6 +491,7 @@ export default function Home() {
       const p = await fetch(`${API}/uploads/presign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           filename: file.name,
           mimeType: file.type || "application/octet-stream",
@@ -405,6 +507,7 @@ export default function Home() {
       const job = await fetch(`${API}/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           filename: file.name,
           mimeType: file.type || "application/octet-stream",
@@ -422,11 +525,42 @@ export default function Home() {
       setBusy(false);
     }
   }
+  async function cancelJob() {
+    if (!active || active.status !== "queued" || cancelling) return;
+    setCancelling(true);
+    setMessage("");
+    try {
+      const response = await fetch(`${API}/jobs/${active.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.message ?? "Unable to cancel parsing");
+      }
+      const cancelled = await response.json();
+      setJobs((current) =>
+        current.map((job) => (job.id === cancelled.id ? cancelled : job)),
+      );
+      setSelected(null);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Unable to cancel parsing");
+      await loadJobs();
+    } finally {
+      setCancelling(false);
+    }
+  }
   const screen =
     active?.status === "completed" ? (
       <ResultScreen job={active} />
+    ) : active?.status === "cancelled" ? (
+      <CancelledScreen onBack={() => setSelected(null)} />
     ) : active ? (
-      <LoadingScreen job={active} onCancel={() => setSelected(null)} />
+      <LoadingScreen
+        job={active}
+        cancelling={cancelling}
+        onCancel={() => void cancelJob()}
+      />
     ) : (
       <UploadScreen
         jobs={jobs}
@@ -435,13 +569,17 @@ export default function Home() {
         method={method}
         setMethod={setMethod}
         onUpload={() => void upload()}
+        onSelect={setSelected}
         busy={busy}
         message={message}
       />
     );
   return (
     <>
-      <Header />
+      <Header
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
       {screen}
     </>
   );
