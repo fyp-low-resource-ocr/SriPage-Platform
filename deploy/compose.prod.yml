@@ -1,7 +1,6 @@
 name: sripage-platform
 
 services:
-
   postgres:
     image: "${POSTGRES_IMAGE:-postgres:16-alpine}"
     restart: unless-stopped
@@ -57,13 +56,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 5s
 
     networks:
       - app
 
 
   minio:
-    image: "${MINIO_IMAGE:?set MINIO_IMAGE}"
+    image: "${MINIO_IMAGE:-minio/minio:latest}"
     restart: unless-stopped
 
     command:
@@ -80,8 +80,8 @@ services:
       - minio_data:/data
 
     ports:
-      - "127.0.0.1:${MINIO_HOST_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+      - "127.0.0.1:${MINIO_HOST_PORT:-9100}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9101}:9001"
 
     networks:
       - app
@@ -93,7 +93,7 @@ services:
     init: true
 
     ports:
-      - "127.0.0.1:${BACKEND_HOST_PORT:-3000}:3000"
+      - "127.0.0.1:${BACKEND_HOST_PORT:-3100}:3000"
 
     environment:
       NODE_ENV: production
@@ -111,7 +111,7 @@ services:
       MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY}"
       MINIO_SECRET_KEY: "${MINIO_SECRET_KEY}"
 
-      CORS_ORIGIN: "${CORS_ORIGIN}"
+      CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:3001}"
 
     depends_on:
       postgres:
@@ -135,7 +135,7 @@ services:
     init: true
 
     ports:
-      - "127.0.0.1:${FRONTEND_HOST_PORT:-3001}:3000"
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-3101}:3000"
 
     depends_on:
       backend:
