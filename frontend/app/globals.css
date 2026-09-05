@@ -535,6 +535,40 @@ footer a {
   border-color: var(--accent);
   color: var(--accent);
 }
+.cancel-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.cancelled-screen {
+  align-items: center;
+  justify-content: center;
+}
+.cancelled-state {
+  color: var(--muted);
+  text-align: center;
+}
+.cancelled-state h2 {
+  margin: 16px 0 8px;
+  color: var(--text);
+  font-size: 18px;
+}
+.cancelled-state p {
+  margin: 0;
+  font-size: 12px;
+}
+.cancelled-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  border: 1px solid var(--outline);
+  border-radius: 50%;
+  color: var(--muted);
+}
+.cancelled-icon .material-symbols-outlined {
+  font-size: 30px;
+}
 .result-screen {
   max-width: 1000px;
   height: calc(100vh - 64px);

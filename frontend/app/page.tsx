@@ -302,6 +302,23 @@ function LoadingScreen({
   );
 }
 
+function CancelledScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <main className="loading-screen cancelled-screen">
+      <div className="cancelled-state">
+        <div className="cancelled-icon">
+          <Icon>cancel</Icon>
+        </div>
+        <h2>Parsing cancelled</h2>
+        <p>This queued task was cancelled before processing started.</p>
+      </div>
+      <button className="cancel-button" type="button" onClick={onBack}>
+        Back to files
+      </button>
+    </main>
+  );
+}
+
 const demoResult = {
   document_id: "INV-2023-0891",
   extraction_confidence: 0.98,
@@ -534,6 +551,8 @@ export default function Home() {
   const screen =
     active?.status === "completed" ? (
       <ResultScreen job={active} />
+    ) : active?.status === "cancelled" ? (
+      <CancelledScreen onBack={() => setSelected(null)} />
     ) : active ? (
       <LoadingScreen
         job={active}
