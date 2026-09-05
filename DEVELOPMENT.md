@@ -21,9 +21,9 @@ The request lifecycle is:
 1. The client calls `POST /uploads/presign`.
 2. The client uploads the PDF directly to MinIO with the returned URL.
 3. The client calls `POST /jobs` to finalize the upload.
-4. The API saves a `queued` job in PostgreSQL and adds a message to the `pdf-parsing` BullMQ queue.
-5. The worker changes the job to `processing`.
-6. The worker resolves the parser method, runs it, and stores the output in PostgreSQL JSONB and MinIO.
+4. The API saves a `queued` job in PostgreSQL and adds a message to the `pdf-parsing` ingress queue.
+5. A dispatcher routes the message to a method queue such as `pdf-parsing-vlm`.
+6. The method worker changes the job to `processing`, calls the internal model service, and stores the normalized output in PostgreSQL JSONB and MinIO.
 7. The worker changes the job to `completed`, or `failed` with an error message.
 8. The frontend polls `GET /jobs/:id` while the job is active.
 
@@ -31,13 +31,13 @@ Current parser:
 
 | Method | Runtime | Behavior |
 | --- | --- | --- |
-| `vlm` | CPU | Dummy parser waits 10 seconds and returns deterministic JSON |
+| `vlm` | CPU/GPU managed by the model service | Parser calls the internal VLM model service and normalizes its response |
 
 ## 2. Repository layout
 
 ```
 backend/src/jobs/       Job entity, DTOs, controller, and queue position logic
-backend/src/parsers/    Parser contract, registry, and dummy VLM parser
+backend/src/parsers/    Parser contract, registry, and model-service clients
 backend/src/queue/      BullMQ queue definition
 backend/src/storage/    MinIO client and presigned URLs
 backend/src/workers/    BullMQ worker processor
@@ -205,6 +205,8 @@ Useful keys:
 | `bull:pdf-parsing:<id>` | A BullMQ job payload and metadata |
 
 The Bull Board web dashboard is available at `http://localhost:3000/admin/queues` while the API is running. It displays the `pdf-parsing` queue and allows queue inspection and management. Set `BULL_BOARD_ENABLED=false` to disable it, or change its path with `BULL_BOARD_PATH`. Redis CLI remains available for low-level inspection, while PostgreSQL and the HTTP API remain the source of truth for user-visible job state.
+
+The ingress queue is `pdf-parsing`; dispatched method queues use the `pdf-parsing-<method>` pattern. Set `WORKER_METHOD=vlm` on a worker deployment to consume only VLM jobs. Leave it empty for a local all-method worker. Model services expose `POST /v1/parse` and receive the input MinIO object key in the JSON request.
 
 ## 7. Inspect PostgreSQL
 

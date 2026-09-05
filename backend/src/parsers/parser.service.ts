@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DummyNonVlmParser, DummyVlmParser } from './dummy.parser';
+import { modelParserConfig } from './model.parser';
 import { PdfParser, ParserRuntime, ParserInput } from './parser.types';
 @Injectable()
 export class ParserService {
-  private readonly parsers = new Map<string, PdfParser>([
-    ['non-vlm', new DummyNonVlmParser()],
-    ['vlm', new DummyVlmParser()],
-  ]);
-  private readonly initializedRuntimes = new Set<ParserRuntime>();
+  private readonly parsers: Map<string, PdfParser>;
+  constructor() {
+    this.parsers = new Map([
+      ['non-vlm', modelParserConfig('non-vlm')],
+      ['vlm', modelParserConfig('vlm')],
+    ]);
+  }
   list() {
     return [...this.parsers.values()].map(({ method, supportedRuntimes }) => ({
       method,
@@ -24,7 +26,6 @@ export class ParserService {
     const parser = this.get(method);
     if (!parser.supportedRuntimes.includes(runtime))
       throw new Error(`Method ${method} does not support ${runtime}`);
-    this.initializedRuntimes.add(runtime);
     return parser.parse(input);
   }
 }

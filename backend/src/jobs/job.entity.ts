@@ -7,11 +7,7 @@ import {
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 export type JobStatus =
-  | 'queued'
-  | 'processing'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
 @Entity('jobs')
 export class Job {
   @ApiProperty({ format: 'uuid' })

@@ -37,6 +37,11 @@ services:
     command: node dist/worker-main
     environment:
       WORKER_ENABLED: "true"
+      WORKER_CONCURRENCY: "${WORKER_CONCURRENCY:-1}"
+      WORKER_METHOD: "${WORKER_METHOD:-}"
+      VLM_MODEL_URL: "${VLM_MODEL_URL:-http://vlm-model:8080}"
+      NON_VLM_MODEL_URL: "${NON_VLM_MODEL_URL:-http://non-vlm-model:8080}"
+      MODEL_REQUEST_TIMEOUT_MS: "${MODEL_REQUEST_TIMEOUT_MS:-300000}"
       DATABASE_URL: "postgres://${POSTGRES_USER:-sripage}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sripage}"
       REDIS_URL: "redis://redis:6379"
       MINIO_ENDPOINT: minio

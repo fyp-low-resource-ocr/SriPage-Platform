@@ -30,7 +30,10 @@ describe('JobsService anonymous ownership', () => {
       findOneBy: jest.fn(async () => ({ id: 'job-1' })),
       update: jest.fn(),
     };
-    queue = { add: jest.fn() };
+    queue = {
+      ingress: jest.fn(() => ({ add: jest.fn() })),
+      method: jest.fn(() => ({ getJob: jest.fn() })),
+    };
     storage = {
       presignUpload: jest.fn(async (key) => `upload:${key}`),
       presignDownload: jest.fn(async (key) => `download:${key}`),

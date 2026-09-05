@@ -1,16 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Queue } from 'bullmq';
 import { randomUUID } from 'crypto';
 import { QueryDeepPartialEntity, Repository } from 'typeorm';
 import { ParserService } from '../parsers/parser.service';
-import { PARSE_QUEUE_TOKEN } from '../queue/queue.module';
+import { QueueService } from '../queue/queue.module';
 import { StorageService } from '../storage/storage.service';
 import { CreateJobDto, PresignUploadDto } from './jobs.dto';
 import { Job } from './job.entity';
@@ -20,7 +18,7 @@ import { AnonymousSessionService } from './anonymous-session.service';
 export class JobsService {
   constructor(
     @InjectRepository(Job) private readonly repo: Repository<Job>,
-    @Inject(PARSE_QUEUE_TOKEN) private readonly queue: Queue,
+    private readonly queues: QueueService,
     private readonly storage: StorageService,
     private readonly parsers: ParserService,
     private readonly sessions: AnonymousSessionService,
@@ -50,11 +48,13 @@ export class JobsService {
         resultObjectKey: null,
       }),
     );
-    await this.queue.add(
-      'parse-pdf',
-      { jobId: job.id },
-      { jobId: job.id, removeOnComplete: 100, removeOnFail: 100 },
-    );
+    await this.queues
+      .ingress()
+      .add(
+        'parse-pdf',
+        { jobId: job.id },
+        { jobId: job.id, removeOnComplete: 100, removeOnFail: 100 },
+      );
     await this.refreshPositions();
     return this.get(job.id, ownerHash);
   }
@@ -98,14 +98,18 @@ export class JobsService {
       throw new ConflictException('The job is no longer queued');
     }
 
-    const queueJob = await this.queue.getJob(id);
-    if (queueJob) {
-      try {
-        await queueJob.remove();
-      } catch {
-        // A worker may have claimed the Redis job in the small window after
-        // the database transition. The worker's guarded claim below will
-        // observe `cancelled` and exit without parsing it.
+    for (const queue of [
+      this.queues.ingress(),
+      this.queues.method(job.method),
+    ]) {
+      const queueJob = await queue.getJob(id);
+      if (queueJob) {
+        try {
+          await queueJob.remove();
+        } catch {
+          // A worker may have claimed the Redis job. The guarded database
+          // claim observes `cancelled` and exits without parsing it.
+        }
       }
     }
     await this.refreshPositions();
