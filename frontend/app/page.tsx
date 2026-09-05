@@ -120,6 +120,7 @@ function UploadScreen({
   method,
   setMethod,
   onUpload,
+  onSelect,
   busy,
   message,
 }: {
@@ -131,6 +132,7 @@ function UploadScreen({
   onUpload: () => void;
   busy: boolean;
   message: string;
+  onSelect: (job: Job) => void;
 }) {
   const choose = (e: ChangeEvent<HTMLInputElement>) =>
     setFile(e.target.files?.[0] ?? null);
@@ -226,6 +228,27 @@ function UploadScreen({
           </div>
         </details>
         {message && <p className="notice">{message}</p>}
+        <section className="history-card" aria-labelledby="history-heading">
+          <div className="history-heading">
+            <div>
+              <h2 id="history-heading">Recent files</h2>
+              <p>This browser&apos;s history</p>
+            </div>
+            <Icon>queue</Icon>
+          </div>
+          {jobs.length === 0 ? (
+            <p className="history-empty">Your parsed files will appear here.</p>
+          ) : (
+            <div className="history-list">
+              {jobs.slice(0, 5).map((job) => (
+                <button className="history-item" key={job.id} onClick={() => onSelect(job)}>
+                  <span><Icon>description</Icon><span>{job.filename}</span></span>
+                  <small>{job.status}</small>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
       <Footer />
     </>
@@ -404,7 +427,7 @@ export default function Home() {
   };
   const loadJobs = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/jobs`, { cache: "no-store" });
+      const r = await fetch(`${API}/jobs`, { cache: "no-store", credentials: "include" });
       if (r.ok) setJobs(await r.json());
     } catch {
       /* API can be offline while UI is previewed. */
@@ -433,6 +456,7 @@ export default function Home() {
       const p = await fetch(`${API}/uploads/presign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           filename: file.name,
           mimeType: file.type || "application/octet-stream",
@@ -448,6 +472,7 @@ export default function Home() {
       const job = await fetch(`${API}/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           filename: file.name,
           mimeType: file.type || "application/octet-stream",
@@ -478,6 +503,7 @@ export default function Home() {
         method={method}
         setMethod={setMethod}
         onUpload={() => void upload()}
+        onSelect={setSelected}
         busy={busy}
         message={message}
       />

@@ -1,15 +1,18 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ParserService } from '../parsers/parser.service';
 import { CreateJobDto, PresignUploadDto } from './jobs.dto';
 import { Job } from './job.entity';
 import { JobsService } from './jobs.service';
+import { AnonymousSessionService } from './anonymous-session.service';
 @Controller()
 @ApiTags('jobs')
 export class JobsController {
   constructor(
     private readonly jobs: JobsService,
     private readonly parsers: ParserService,
+    private readonly sessions: AnonymousSessionService,
   ) {}
   @Get('methods')
   @ApiOperation({ summary: 'List available parsing methods' })
@@ -28,22 +31,30 @@ export class JobsController {
       },
     },
   })
-  presign(@Body() dto: PresignUploadDto) {
-    return this.jobs.presign(dto);
+  presign(
+    @Body() dto: PresignUploadDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.jobs.presign(dto, this.sessions.getOwnerHash(req, res));
   }
 
   @Post('jobs')
   @ApiOperation({ summary: 'Create and queue a PDF parsing job' })
   @ApiResponse({ status: 201, type: Job })
-  create(@Body() dto: CreateJobDto) {
-    return this.jobs.create(dto);
+  create(
+    @Body() dto: CreateJobDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.jobs.create(dto, this.sessions.getOwnerHash(req, res));
   }
 
   @Get('jobs')
   @ApiOperation({ summary: 'List parsing jobs, newest first' })
   @ApiResponse({ status: 200, type: Job, isArray: true })
-  list() {
-    return this.jobs.list();
+  list(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.jobs.list(this.sessions.getOwnerHash(req, res));
   }
 
   @Get('jobs/:id')
@@ -51,8 +62,12 @@ export class JobsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiResponse({ status: 200, type: Job })
   @ApiResponse({ status: 404, description: 'Job not found.' })
-  get(@Param('id') id: string) {
-    return this.jobs.get(id);
+  get(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.jobs.get(id, this.sessions.getOwnerHash(req, res));
   }
 
   @Get('jobs/:id/result')
@@ -66,7 +81,11 @@ export class JobsController {
     status: 404,
     description: 'Job not found or result is not ready.',
   })
-  result(@Param('id') id: string) {
-    return this.jobs.getResultUrl(id);
+  result(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.jobs.getResultUrl(id, this.sessions.getOwnerHash(req, res));
   }
 }

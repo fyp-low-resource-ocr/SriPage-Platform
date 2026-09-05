@@ -12,6 +12,9 @@ export class Job {
   @ApiProperty({ format: 'uuid' })
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+  @ApiProperty({ nullable: true, writeOnly: true })
+  @Column({ type: 'varchar', length: 64, nullable: true, select: false })
+  ownerTokenHash!: string | null;
   @ApiProperty({ example: 'invoice.pdf' })
   @Column()
   filename!: string;

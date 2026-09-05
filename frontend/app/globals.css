@@ -242,6 +242,51 @@ button {
 .intro p {
   margin: 0;
 }
+.history-card {
+  margin: 24px 0 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--soft-line);
+  border-radius: 10px;
+  background: var(--container);
+}
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.history-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+.history-heading p,
+.history-empty {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.history-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--soft-line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.history-item:hover { border-color: var(--accent); }
+.history-item > span { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.history-item > span > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item small { color: var(--muted); text-transform: capitalize; }
 .upload-zone {
   position: relative;
   min-height: 365px;

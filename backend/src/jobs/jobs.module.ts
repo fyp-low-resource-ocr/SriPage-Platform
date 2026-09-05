@@ -6,6 +6,7 @@ import { StorageModule } from '../storage/storage.module';
 import { Job } from './job.entity';
 import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
+import { AnonymousSessionService } from './anonymous-session.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Job]),
@@ -14,7 +15,7 @@ import { JobsService } from './jobs.service';
     ParserModule,
   ],
   controllers: [JobsController],
-  providers: [JobsService],
+  providers: [JobsService, AnonymousSessionService],
   exports: [JobsService],
 })
 export class JobsModule {}
