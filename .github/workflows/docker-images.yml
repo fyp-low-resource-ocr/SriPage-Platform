@@ -78,3 +78,88 @@ jobs:
           tags: |
             ghcr.io/${{ steps.image.outputs.owner }}/sripage-frontend:${{ github.sha }}
             ghcr.io/${{ steps.image.outputs.owner }}/sripage-frontend:latest
+
+  deploy:
+    name: Deploy Production
+
+    needs:
+      - build-backend
+      - build-frontend
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - sripage-deploy
+
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update deployment configuration
+        run: |
+          install -m 644 \
+            deploy/compose.prod.yml \
+            /home/sripage-deploy/SriPage-Platform/compose.prod.yml
+
+          printf 'APP_VERSION=%s\n' "$GITHUB_SHA" \
+            > /home/sripage-deploy/SriPage-Platform/version.env
+
+          chmod 600 \
+            /home/sripage-deploy/SriPage-Platform/version.env
+
+      - name: Validate production configuration
+        working-directory: /home/sripage-deploy/SriPage-Platform
+        run: |
+          docker compose \
+            -p sripage-platform \
+            -f compose.prod.yml \
+            --env-file .env \
+            --env-file version.env \
+            config --quiet
+
+      - name: Pull application images
+        working-directory: /home/sripage-deploy/SriPage-Platform
+        run: |
+          docker compose \
+            -p sripage-platform \
+            -f compose.prod.yml \
+            --env-file .env \
+            --env-file version.env \
+            pull backend frontend
+
+      - name: Deploy application
+        working-directory: /home/sripage-deploy/SriPage-Platform
+        run: |
+          docker compose \
+            -p sripage-platform \
+            -f compose.prod.yml \
+            --env-file .env \
+            --env-file version.env \
+            up -d --remove-orphans
+
+      - name: Show deployment status
+        working-directory: /home/sripage-deploy/SriPage-Platform
+        run: |
+          docker compose \
+            -p sripage-platform \
+            -f compose.prod.yml \
+            --env-file .env \
+            --env-file version.env \
+            ps
